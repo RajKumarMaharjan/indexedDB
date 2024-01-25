@@ -4,25 +4,47 @@ const edit = document.querySelector(".update");
 const tbody = document.querySelector("table>tbody");
 
 submitBtn.addEventListener('click', () => {
-    let idb = indexedDB.open('curd');
+let isEmptyField = false;
 
-    idb.onupgradeneeded = () => {
-        let result = idb.result;
-        result.createObjectStore('data', {autoIncrement: true});
+for(let i = 0; i < form.length; i++){
+    if(form[i].value.trim() === ""){
+        alert("Please fill in all fields before submitting.");
+        return;
+    }else{
+        isEmptyField = true;
+            break;
     }
-    idb.onsuccess = () => {
-        let result = idb.result
-        let trans = result.transaction('data', 'readwrite');
-        let store = trans.objectStore('data');
-        store.put({
-            name: form[0].value,
-            email: form[1].value,
-            phone: form[2].value,
-            address: form[3].value
-        })
-    }
-    alert("Data has been added");
-      location.reload();
+}
+
+let idb = indexedDB.open('curd');
+
+idb.onupgradeneeded = () => {
+    let result = idb.result;
+    result.createObjectStore('data', {autoIncrement: true});
+}
+idb.onsuccess = () => {
+    let result = idb.result
+    let trans = result.transaction('data', 'readwrite');
+    let store = trans.objectStore('data');
+
+    trans.oncomplete = () => {
+        alert("Data has been added");
+        location.reload();
+    };
+
+    store.put({
+        name: form[0].value,
+        email: form[1].value,
+        phone: form[2].value,
+        address: form[3].value
+    })
+}
+
+idb.onerror = (event) => {
+    // Handle errors
+    console.error("Error opening IndexedDB", event);
+};
+
 })
 
 function read() {
@@ -62,30 +84,53 @@ function read() {
       location.reload();
     };
   }
-  
-  let updateKey;
-  function update(e) {
-    submitBtn.style.display = "none";
-    edit.style.display = "block";
-    updateKey = e;
-  }
-  
-  edit.addEventListener("click", () => {
-    let idb = indexedDB.open("curd");
-    idb.onsuccess = () => {
-      let result = idb.result;
-      let trans = result.transaction("data", "readwrite");
-      let store = trans.objectStore("data");
-      store.put({
-          name: form[0].value,
-          email: form[1].value,
-          phone: form[2].value,
-          address: form[3].value,
-        },updateKey);
-      alert("Data has been update");
+
+let updateKey;
+
+function update(e) {
+  submitBtn.style.display = "none";
+  edit.style.display = "block";
+  updateKey = e;
+}
+
+edit.addEventListener("click", () => {
+  let idb = indexedDB.open("curd");
+  idb.onsuccess = () => {
+    let result = idb.result;
+    let trans = result.transaction("data", "readwrite");
+    let store = trans.objectStore("data");
+    let getRequest = store.get(updateKey);
+
+    getRequest.onsuccess = () => {
+      let existingData = getRequest.result;
+
+      // Update fields only if the corresponding form field has a value
+      if (form[0].value.trim() !== "") {
+        existingData.name = form[0].value;
+      }
+      if (form[1].value.trim() !== "") {
+        existingData.email = form[1].value;
+      }
+      if (form[2].value.trim() !== "") {
+        existingData.phone = form[2].value;
+      }
+      if (form[3].value.trim() !== "") {
+        existingData.address = form[3].value;
+      }
+
+      // Put the updated data back into the store
+      store.put(existingData, updateKey);
+
+      alert("Data has been updated");
       location.reload();
     };
-  });
-  
 
-  read();
+    getRequest.onerror = () => {
+      console.error("Error retrieving data for update");
+    };
+  };
+});
+
+// Assuming read() is a function that reads data from the store
+read();
+
