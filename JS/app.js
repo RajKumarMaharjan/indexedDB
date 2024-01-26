@@ -1,7 +1,10 @@
 const form = document.querySelector("form");
 const submitBtn = document.querySelector(".submit");
-const edit = document.querySelector(".update");
+const updates = document.querySelector(".update");
 const tbody = document.querySelector("table>tbody");
+const editBtn = document.querySelector(".up")
+
+let existingData;
 
 submitBtn.addEventListener('click', () => {
   let isEmptyField = false;
@@ -55,9 +58,10 @@ function read() {
               <td>${cursorResult.value.email}</td>
               <td>${cursorResult.value.phone}</td>
               <td>${cursorResult.value.address}</td>
-              <td onclick="update(${cursorResult.key})" class="up">Update</td>
+              <td onclick="update(${cursorResult.key}); edit();" class="up">Edit</td>
               <td onclick="del(${cursorResult.key})" class="de">Delete</td>
               </tr>`;
+              
           cursorResult.continue();
           }
       }
@@ -81,12 +85,13 @@ let updateKey;
 
 function update(e) {
   submitBtn.style.display = "none";
-  edit.style.display = "block";
+  updates.style.display = "block";
   updateKey = e;
 }
 
-edit.addEventListener("click", () => {
+updates.addEventListener("click", () => {
   let idb = indexedDB.open("CURD");
+
   idb.onsuccess = () => {
     let result = idb.result;
     let trans = result.transaction("data", "readwrite");
@@ -94,8 +99,9 @@ edit.addEventListener("click", () => {
     let getRequest = store.get(updateKey);
 
     getRequest.onsuccess = () => {
-      let existingData = getRequest.result;
+      existingData = getRequest.result;
 
+      
       // Update fields only if the corresponding form field has a value
       if (form[0].value.trim() !== "") {
         existingData.name = form[0].value;
@@ -115,6 +121,7 @@ edit.addEventListener("click", () => {
 
       alert("Data has been updated");
       location.reload();
+    
     };
 
     getRequest.onerror = () => {
@@ -122,6 +129,31 @@ edit.addEventListener("click", () => {
     };
   };
 });
+
+function edit() {
+  let idb = indexedDB.open("CURD");
+
+  idb.onsuccess = () => {
+    let result = idb.result;
+    let trans = result.transaction("data", "readonly");
+    let store = trans.objectStore("data");
+    let getRequest = store.get(updateKey);
+
+    getRequest.onsuccess = () => {
+      existingData = getRequest.result;
+
+      // Update fields only if the corresponding form field has a value
+      form[0].value = existingData.name || '';
+      form[1].value = existingData.email || '';
+      form[2].value = existingData.phone || '';
+      form[3].value = existingData.address || '';
+    };
+
+    getRequest.onerror = () => {
+      console.error("Error retrieving data for editing");
+    };
+  };
+}
 
 // Assuming read() is a function that reads data from the store
 read();
